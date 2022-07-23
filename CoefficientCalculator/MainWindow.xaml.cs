@@ -1,5 +1,9 @@
-﻿using CoefficientCalculator.Services;
+﻿using CoefficientCalculator.Entities;
+using CoefficientCalculator.Services;
 using Microsoft.Win32;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows;
 
 namespace CoefficientCalculator
@@ -9,37 +13,47 @@ namespace CoefficientCalculator
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly OpenFileDialog openFileDialog;
-        //private readonly List<string> fileNames = new List<string>();
-        private FileService fileService;
+        private const int StartColumnNumber = 4;
+        private readonly OpenFileDialog openBaseFileDialog;
+        private readonly OpenFileDialog openCoefficientFileDialog;
         private string baseFilePath;
+        private List<string> baseFilePaths;
         private string coefficientFilePath;
 
         public MainWindow()
         {
-            openFileDialog = new OpenFileDialog();
+            openBaseFileDialog = new OpenFileDialog
+            {
+                Multiselect = true,
+                Filter = "Excel files (*.xlsx, *.xls)|*.xlsx; *.xls"
+            };
+
+            baseFilePaths = new List<string>();
+
+            openCoefficientFileDialog = new OpenFileDialog
+            {
+                Filter = "Excel files (*.xlsx, *.xls)|*.xlsx; *.xls"
+            };
+
             InitializeComponent();
         }
 
         private void BtnOpenBaseFile_Click(object sender, RoutedEventArgs e)
         {
-            openFileDialog.Filter = "Excel files (*.xlsx, *.xls)|*.xlsx; *.xls";
-
-            if (openFileDialog.ShowDialog() == true)
+            if (openBaseFileDialog.ShowDialog() == true)
             {
-                tbBaseFile.Text = openFileDialog.FileName;
-                baseFilePath = openFileDialog.FileName;
+                tbBaseFile.Text = openBaseFileDialog.FileName;
+                baseFilePath = openBaseFileDialog.FileName;
+                baseFilePaths = openBaseFileDialog.FileNames.ToList();
             }
         }
 
         private void BtnOpenCoefficientFile_Click(object sender, RoutedEventArgs e)
         {
-            openFileDialog.Filter = "Excel files (*.xlsx, *.xls)|*.xlsx; *.xls";
-
-            if (openFileDialog.ShowDialog() == true)
+            if (openCoefficientFileDialog.ShowDialog() == true)
             {
-                tbCoefficientFile.Text = openFileDialog.FileName;
-                coefficientFilePath = openFileDialog.FileName;
+                tbCoefficientFile.Text = openCoefficientFileDialog.FileName;
+                coefficientFilePath = openCoefficientFileDialog.FileName;
             }
         }
 
@@ -47,12 +61,53 @@ namespace CoefficientCalculator
         {
             if (IsValidFilePaths())
             {
-                fileService = new FileService(baseFilePath, coefficientFilePath, "П1");
+                int startColumnNumber = StartColumnNumber;
+                int currentColumnNumber = StartColumnNumber + 3;
+                FileInfo outputFile = FileService.CopyXLSX(new FileInfo(coefficientFilePath), "П1");
+                List<CoefficientRecord> firstCoefficientRecords = FileService.GetCoefficientRecords(new FileInfo(coefficientFilePath), 0);
+                List<CoefficientRecord> secondCoefficientRecords = FileService.GetCoefficientRecords(new FileInfo(coefficientFilePath), 1);
+                var totalFirstWorksheetSearchResultRecords = new List<SearchResultRecord>();
+                var totalSecondWorksheetSearchResultRecords = new List<SearchResultRecord>();
 
-                fileService.SearchForFirstCoefficientCollection();
-                fileService.WriteFirstCoefficientCollectionSearchResults(0, 7);
-                fileService.SearchForSecondCoefficientCollection();
-                fileService.WriteSecondCoefficientCollectionSearchResults(1, 7);
+                foreach (string filePath in baseFilePaths)
+                {
+                    FileInfo baseFile = new FileInfo(filePath);
+                    bool temporaryFileCreated = FileService.CreateTemporaryFileIfNeeded(baseFile, out FileInfo newBaseFile);
+
+                    if (temporaryFileCreated)
+                    {
+                        baseFile = newBaseFile;
+                    }
+
+                    List<MatchRecord> matchRecords = FileService.GetMatchRecords(baseFile);
+
+                    var firstWorksheetSearchResultRecords = FileService.GetSearchResultRecords(matchRecords, firstCoefficientRecords, 1, 1);
+                    FileService.WriteSearchResults(firstWorksheetSearchResultRecords, new FileInfo(filePath), outputFile, 0, currentColumnNumber);
+
+                    var secondWorksheetSearchResultRecords = FileService.GetSearchResultRecords(matchRecords, secondCoefficientRecords, 1, 2);
+                    FileService.WriteSearchResults(secondWorksheetSearchResultRecords, new FileInfo(filePath), outputFile, 1, currentColumnNumber);
+
+                    if (currentColumnNumber == StartColumnNumber + 3)
+                    {
+                        totalFirstWorksheetSearchResultRecords.AddRange(firstWorksheetSearchResultRecords);
+                        totalSecondWorksheetSearchResultRecords.AddRange(secondWorksheetSearchResultRecords);
+                    }
+                    else
+                    {
+                        FileService.CalculateTotalResult(totalFirstWorksheetSearchResultRecords, firstWorksheetSearchResultRecords);
+                        FileService.CalculateTotalResult(totalSecondWorksheetSearchResultRecords, secondWorksheetSearchResultRecords);
+                    }
+
+                    if (temporaryFileCreated)
+                    {
+                        FileService.DeleteFile(newBaseFile);
+                    }
+
+                    currentColumnNumber += 3;
+                }
+
+                FileService.WriteSearchResults(totalFirstWorksheetSearchResultRecords, outputFile, 0, startColumnNumber);
+                FileService.WriteSearchResults(totalSecondWorksheetSearchResultRecords, outputFile, 1, startColumnNumber);
 
                 MessageBox.Show("Готово!");
             }
@@ -60,36 +115,22 @@ namespace CoefficientCalculator
 
         private void BtnX_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(baseFilePath))
-            {
-                MessageBox.Show("Сначала выберите исходный файл.");
-            }
-            else
-            {
-                MessageBox.Show("Готово!");
-            }
+            IsValidFilePaths();
         }
 
         private void BtnP2_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(baseFilePath))
-            {
-                MessageBox.Show("Сначала выберите исходный файл.");
-            }
-            else
-            {
-                MessageBox.Show("Готово!");
-            }
+            IsValidFilePaths();
         }
 
         private bool IsValidFilePaths()
         {
-            if (string.IsNullOrEmpty(baseFilePath))
+            if (string.IsNullOrEmpty(openBaseFileDialog.FileName))
             {
                 MessageBox.Show("Сначала выберите исходный файл.");
                 return false;
             }
-            else if (string.IsNullOrEmpty(coefficientFilePath))
+            else if (string.IsNullOrEmpty(openCoefficientFileDialog.FileName))
             {
                 MessageBox.Show("Сначала выберите файл коэффициентов.");
                 return false;

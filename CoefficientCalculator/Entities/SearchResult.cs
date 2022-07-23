@@ -2,8 +2,6 @@
 {
     public class SearchResult
     {
-        public int RowNumber { get; set; }
-
         public int Wins { get; set; }
 
         public int Losses { get; set; }
