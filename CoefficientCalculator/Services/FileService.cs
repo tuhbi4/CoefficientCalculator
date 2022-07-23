@@ -15,7 +15,11 @@ namespace CoefficientCalculator.Services
 
         public List<CoefficientRecord> FirstCoefficientRecords { get; }
 
+        public List<SearchResultRecord> FirstSearchResultRecords { get; }
+
         public List<CoefficientRecord> SecondCoefficientRecords { get; }
+
+        public List<SearchResultRecord> SecondSearchResultRecords { get; }
 
         private readonly string baseFilePath;
         private readonly string coefficientFilePath;
@@ -34,88 +38,223 @@ namespace CoefficientCalculator.Services
             MatchRecords = GetBaseCollection();
             FirstCoefficientRecords = GetCoefficientCollection(0);
             SecondCoefficientRecords = GetCoefficientCollection(1);
+            FirstSearchResultRecords = new List<SearchResultRecord>();
+            SecondSearchResultRecords = new List<SearchResultRecord>();
         }
 
         public void SearchForFirstCoefficientCollection()
         {
-            using (var p = new ExcelPackage(OutputFileInfo))
+            int row = 1;
+
+            foreach (var coefficientRecord in FirstCoefficientRecords)
             {
-                var p1ws1 = p.Workbook.Worksheets[0];
-                p1ws1.Cells[1, 4].Value = "Всего";
-                p1ws1.Cells[1, 5].Value = "Ниже";
-                p1ws1.Cells[1, 6].Value = "Выше";
-                p1ws1.Cells[1, 7].Value = $"{baseFile.Name}";
-                p1ws1.Cells[1, 8].Value = "Ниже";
-                p1ws1.Cells[1, 9].Value = "Выше";
-                int row = 1;
+                SearchResult lowerCoefficients = new SearchResult();
+                SearchResult higherCoefficients = new SearchResult();
+                SearchResult totalCoefficients = new SearchResult();
+                List<MatchRecord> matchRecords = MatchRecords.FindAll(x => x.G == coefficientRecord.A && x.H == coefficientRecord.B);
 
-                foreach (var coefficientRecord in FirstCoefficientRecords)
+                decimal.TryParse(new Regex(@" - ").Split(new Regex(@"[.]").Replace(coefficientRecord.C, ",")).ToList()[0], out decimal coefficient);
+                row++;
+
+                foreach (var matchRecord in matchRecords)
                 {
-                    SearchResult lowerCoefficients = new SearchResult();
-                    SearchResult higherCoefficients = new SearchResult();
-                    SearchResult totalCoefficients = new SearchResult();
-                    row++;
-                    List<MatchRecord> matchRecords = MatchRecords.FindAll(x => x.G == coefficientRecord.A && x.H == coefficientRecord.B);
+                    int matchState = GetMatchState(matchRecord.Score);
 
-                    decimal.TryParse(new Regex(@" - ").Split(new Regex(@"[.]").Replace(coefficientRecord.C, ",")).ToList()[0], out decimal coefficient);
-
-                    foreach (var matchRecord in matchRecords)
+                    if (matchState == -2)
                     {
-                        int matchState = GetMatchState(matchRecord.Score);
+                        continue;
+                    }
 
-                        if (matchState == -2)
+                    if (matchRecord.K <= coefficient)
+                    {
+                        if (matchState == 1)
                         {
-                            continue;
-                        }
-
-                        if (matchRecord.K <= coefficient)
-                        {
-                            if (matchState == 1)
-                            {
-                                lowerCoefficients.Wins++;
-                                lowerCoefficients.Coefficient += matchRecord.K;
-                            }
-                            else
-                            {
-                                lowerCoefficients.Losses++;
-                            }
-
-                            lowerCoefficients.Total++;
+                            lowerCoefficients.Wins++;
+                            lowerCoefficients.Coefficient += matchRecord.K;
                         }
                         else
                         {
-                            if (matchState == 1)
-                            {
-                                higherCoefficients.Wins++;
-                                higherCoefficients.Coefficient += matchRecord.K;
-                            }
-                            else
-                            {
-                                higherCoefficients.Losses++;
-                            }
-
-                            higherCoefficients.Total++;
+                            lowerCoefficients.Losses++;
                         }
 
-                        totalCoefficients.Wins = lowerCoefficients.Wins + higherCoefficients.Wins;
-                        totalCoefficients.Losses = lowerCoefficients.Losses + higherCoefficients.Losses;
-                        totalCoefficients.Total = lowerCoefficients.Total + higherCoefficients.Total;
-                        totalCoefficients.Coefficient = lowerCoefficients.Coefficient + higherCoefficients.Coefficient;
-
-                        if (totalCoefficients.Total > 0)
+                        lowerCoefficients.RowNumber = row;
+                        lowerCoefficients.Total++;
+                    }
+                    else
+                    {
+                        if (matchState == 1)
                         {
-                            p1ws1.Cells[row, 7].Value = $"+{totalCoefficients.Wins}-{totalCoefficients.Losses}={totalCoefficients.Total} кф {totalCoefficients.Coefficient}";
+                            higherCoefficients.Wins++;
+                            higherCoefficients.Coefficient += matchRecord.K;
+                        }
+                        else
+                        {
+                            higherCoefficients.Losses++;
                         }
 
-                        if (lowerCoefficients.Total > 0)
+                        higherCoefficients.RowNumber = row;
+                        higherCoefficients.Total++;
+                    }
+
+                    totalCoefficients.RowNumber = row;
+                    totalCoefficients.Wins = lowerCoefficients.Wins + higherCoefficients.Wins;
+                    totalCoefficients.Losses = lowerCoefficients.Losses + higherCoefficients.Losses;
+                    totalCoefficients.Total = lowerCoefficients.Total + higherCoefficients.Total;
+                    totalCoefficients.Coefficient = lowerCoefficients.Coefficient + higherCoefficients.Coefficient;
+
+                    FirstSearchResultRecords.Add(new SearchResultRecord
+                    {
+                        LowerCoefficients = lowerCoefficients,
+                        HigherCoefficients = higherCoefficients,
+                        TotalCoefficients = totalCoefficients
+                    });
+                }
+            }
+        }
+
+        public void SearchForSecondCoefficientCollection()
+        {
+            int row = 1;
+
+            foreach (var coefficientRecord in SecondCoefficientRecords)
+            {
+                SearchResult lowerCoefficients = new SearchResult();
+                SearchResult higherCoefficients = new SearchResult();
+                SearchResult totalCoefficients = new SearchResult();
+                List<MatchRecord> matchRecords = MatchRecords.FindAll(x => x.I == coefficientRecord.A && x.J == coefficientRecord.B);
+
+                decimal.TryParse(new Regex(@" - ").Split(new Regex(@"[.]").Replace(coefficientRecord.C, ",")).ToList()[0], out decimal coefficient);
+                row++;
+
+                foreach (var matchRecord in matchRecords)
+                {
+                    int matchState = GetMatchState(matchRecord.Score);
+
+                    if (matchState == -2)
+                    {
+                        continue;
+                    }
+
+                    if (matchRecord.K <= coefficient)
+                    {
+                        if (matchState == 1)
                         {
-                            p1ws1.Cells[row, 8].Value = $"+{lowerCoefficients.Wins}-{lowerCoefficients.Losses}={lowerCoefficients.Total} кф {lowerCoefficients.Coefficient}";
+                            lowerCoefficients.Wins++;
+                            lowerCoefficients.Coefficient += matchRecord.K;
+                        }
+                        else
+                        {
+                            lowerCoefficients.Losses++;
                         }
 
-                        if (higherCoefficients.Total > 0)
+                        lowerCoefficients.RowNumber = row;
+                        lowerCoefficients.Total++;
+                    }
+                    else
+                    {
+                        if (matchState == 1)
                         {
-                            p1ws1.Cells[row, 9].Value = $"+{higherCoefficients.Wins}-{higherCoefficients.Losses}={higherCoefficients.Total} кф {higherCoefficients.Coefficient}";
+                            higherCoefficients.Wins++;
+                            higherCoefficients.Coefficient += matchRecord.K;
                         }
+                        else
+                        {
+                            higherCoefficients.Losses++;
+                        }
+
+                        higherCoefficients.RowNumber = row;
+                        higherCoefficients.Total++;
+                    }
+
+                    totalCoefficients.RowNumber = row;
+                    totalCoefficients.Wins = lowerCoefficients.Wins + higherCoefficients.Wins;
+                    totalCoefficients.Losses = lowerCoefficients.Losses + higherCoefficients.Losses;
+                    totalCoefficients.Total = lowerCoefficients.Total + higherCoefficients.Total;
+                    totalCoefficients.Coefficient = lowerCoefficients.Coefficient + higherCoefficients.Coefficient;
+
+                    SecondSearchResultRecords.Add(new SearchResultRecord
+                    {
+                        LowerCoefficients = lowerCoefficients,
+                        HigherCoefficients = higherCoefficients,
+                        TotalCoefficients = totalCoefficients
+                    });
+                }
+            }
+        }
+
+        public void WriteFirstCoefficientCollectionSearchResults(int worksheetIndex, int startRowNumber)
+        {
+            using (var p = new ExcelPackage(OutputFileInfo))
+            {
+                var p1ws1 = p.Workbook.Worksheets[worksheetIndex];
+                p1ws1.Cells[1, startRowNumber].Value = $"{baseFile.Name}";
+                p1ws1.Cells[1, startRowNumber + 1].Value = "Ниже";
+                p1ws1.Cells[1, startRowNumber + 2].Value = "Выше";
+
+                foreach (var searchResultRecord in FirstSearchResultRecords)
+                {
+                    if (searchResultRecord.TotalCoefficients.Total > 0)
+                    {
+                        p1ws1.Cells[searchResultRecord.TotalCoefficients.RowNumber, startRowNumber].Value = $"+{searchResultRecord.TotalCoefficients.Wins}" +
+                            $"-{searchResultRecord.TotalCoefficients.Losses}" +
+                            $"={searchResultRecord.TotalCoefficients.Total}" +
+                            $" кф {searchResultRecord.TotalCoefficients.Coefficient}";
+                    }
+
+                    if (searchResultRecord.LowerCoefficients.Total > 0)
+                    {
+                        p1ws1.Cells[searchResultRecord.LowerCoefficients.RowNumber, startRowNumber + 1].Value = $"+{searchResultRecord.LowerCoefficients.Wins}" +
+                            $"-{searchResultRecord.LowerCoefficients.Losses}" +
+                            $"={searchResultRecord.LowerCoefficients.Total}" +
+                            $" кф {searchResultRecord.LowerCoefficients.Coefficient}";
+                    }
+
+                    if (searchResultRecord.HigherCoefficients.Total > 0)
+                    {
+                        p1ws1.Cells[searchResultRecord.HigherCoefficients.RowNumber, startRowNumber + 2].Value = $"+{searchResultRecord.HigherCoefficients.Wins}" +
+                            $"-{searchResultRecord.HigherCoefficients.Losses}" +
+                            $"={searchResultRecord.HigherCoefficients.Total}" +
+                            $" кф {searchResultRecord.HigherCoefficients.Coefficient}";
+                    }
+                }
+
+                p.Save();
+            }
+        }
+
+        public void WriteSecondCoefficientCollectionSearchResults(int worksheetIndex, int startRowNumber)
+        {
+            using (var p = new ExcelPackage(OutputFileInfo))
+            {
+                var p1ws1 = p.Workbook.Worksheets[worksheetIndex];
+                p1ws1.Cells[1, startRowNumber].Value = $"{baseFile.Name}";
+                p1ws1.Cells[1, startRowNumber + 1].Value = "Ниже";
+                p1ws1.Cells[1, startRowNumber + 2].Value = "Выше";
+
+                foreach (var searchResultRecord in SecondSearchResultRecords)
+                {
+                    if (searchResultRecord.TotalCoefficients.Total > 0)
+                    {
+                        p1ws1.Cells[searchResultRecord.TotalCoefficients.RowNumber, startRowNumber].Value = $"+{searchResultRecord.TotalCoefficients.Wins}" +
+                            $"-{searchResultRecord.TotalCoefficients.Losses}" +
+                            $"={searchResultRecord.TotalCoefficients.Total}" +
+                            $" кф {searchResultRecord.TotalCoefficients.Coefficient}";
+                    }
+
+                    if (searchResultRecord.LowerCoefficients.Total > 0)
+                    {
+                        p1ws1.Cells[searchResultRecord.LowerCoefficients.RowNumber, startRowNumber + 1].Value = $"+{searchResultRecord.LowerCoefficients.Wins}" +
+                            $"-{searchResultRecord.LowerCoefficients.Losses}" +
+                            $"={searchResultRecord.LowerCoefficients.Total}" +
+                            $" кф {searchResultRecord.LowerCoefficients.Coefficient}";
+                    }
+
+                    if (searchResultRecord.HigherCoefficients.Total > 0)
+                    {
+                        p1ws1.Cells[searchResultRecord.HigherCoefficients.RowNumber, startRowNumber + 2].Value = $"+{searchResultRecord.HigherCoefficients.Wins}" +
+                            $"-{searchResultRecord.HigherCoefficients.Losses}" +
+                            $"={searchResultRecord.HigherCoefficients.Total}" +
+                            $" кф {searchResultRecord.HigherCoefficients.Coefficient}";
                     }
                 }
 

@@ -50,6 +50,9 @@ namespace CoefficientCalculator
                 fileService = new FileService(baseFilePath, coefficientFilePath, "П1");
 
                 fileService.SearchForFirstCoefficientCollection();
+                fileService.WriteFirstCoefficientCollectionSearchResults(0, 7);
+                fileService.SearchForSecondCoefficientCollection();
+                fileService.WriteSecondCoefficientCollectionSearchResults(1, 7);
 
                 MessageBox.Show("Готово!");
             }
