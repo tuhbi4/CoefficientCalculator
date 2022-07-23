@@ -61,53 +61,7 @@ namespace CoefficientCalculator
         {
             if (IsValidFilePaths())
             {
-                int startColumnNumber = StartColumnNumber;
-                int currentColumnNumber = StartColumnNumber + 3;
-                FileInfo outputFile = FileService.CopyXLSX(new FileInfo(coefficientFilePath), "П1");
-                List<CoefficientRecord> firstCoefficientRecords = FileService.GetCoefficientRecords(new FileInfo(coefficientFilePath), 0);
-                List<CoefficientRecord> secondCoefficientRecords = FileService.GetCoefficientRecords(new FileInfo(coefficientFilePath), 1);
-                var totalFirstWorksheetSearchResultRecords = new List<SearchResultRecord>();
-                var totalSecondWorksheetSearchResultRecords = new List<SearchResultRecord>();
-
-                foreach (string filePath in baseFilePaths)
-                {
-                    FileInfo baseFile = new FileInfo(filePath);
-                    bool temporaryFileCreated = FileService.CreateTemporaryFileIfNeeded(baseFile, out FileInfo newBaseFile);
-
-                    if (temporaryFileCreated)
-                    {
-                        baseFile = newBaseFile;
-                    }
-
-                    List<MatchRecord> matchRecords = FileService.GetMatchRecords(baseFile);
-
-                    var firstWorksheetSearchResultRecords = FileService.GetSearchResultRecords(matchRecords, firstCoefficientRecords, 1, 1);
-                    FileService.WriteSearchResults(firstWorksheetSearchResultRecords, new FileInfo(filePath), outputFile, 0, currentColumnNumber);
-
-                    var secondWorksheetSearchResultRecords = FileService.GetSearchResultRecords(matchRecords, secondCoefficientRecords, 1, 2);
-                    FileService.WriteSearchResults(secondWorksheetSearchResultRecords, new FileInfo(filePath), outputFile, 1, currentColumnNumber);
-
-                    if (currentColumnNumber == StartColumnNumber + 3)
-                    {
-                        totalFirstWorksheetSearchResultRecords.AddRange(firstWorksheetSearchResultRecords);
-                        totalSecondWorksheetSearchResultRecords.AddRange(secondWorksheetSearchResultRecords);
-                    }
-                    else
-                    {
-                        FileService.CalculateTotalResult(totalFirstWorksheetSearchResultRecords, firstWorksheetSearchResultRecords);
-                        FileService.CalculateTotalResult(totalSecondWorksheetSearchResultRecords, secondWorksheetSearchResultRecords);
-                    }
-
-                    if (temporaryFileCreated)
-                    {
-                        FileService.DeleteFile(newBaseFile);
-                    }
-
-                    currentColumnNumber += 3;
-                }
-
-                FileService.WriteSearchResults(totalFirstWorksheetSearchResultRecords, outputFile, 0, startColumnNumber);
-                FileService.WriteSearchResults(totalSecondWorksheetSearchResultRecords, outputFile, 1, startColumnNumber);
+                CreateAndWriteData("П1", 1);
 
                 MessageBox.Show("Готово!");
             }
@@ -115,12 +69,22 @@ namespace CoefficientCalculator
 
         private void BtnX_Click(object sender, RoutedEventArgs e)
         {
-            IsValidFilePaths();
+            if (IsValidFilePaths())
+            {
+                CreateAndWriteData("Х", 2);
+
+                MessageBox.Show("Готово!");
+            }
         }
 
         private void BtnP2_Click(object sender, RoutedEventArgs e)
         {
-            IsValidFilePaths();
+            if (IsValidFilePaths())
+            {
+                CreateAndWriteData("П2", 3);
+
+                MessageBox.Show("Готово!");
+            }
         }
 
         private bool IsValidFilePaths()
@@ -137,6 +101,57 @@ namespace CoefficientCalculator
             }
 
             return true;
+        }
+
+        private void CreateAndWriteData(string outputfileName, int coefficientPosition)
+        {
+            int startColumnNumber = StartColumnNumber;
+            int currentColumnNumber = StartColumnNumber + 3;
+            FileInfo outputFile = FileService.CopyXLSX(new FileInfo(coefficientFilePath), outputfileName);
+            List<CoefficientRecord> firstCoefficientRecords = FileService.GetCoefficientRecords(new FileInfo(coefficientFilePath), 0);
+            List<CoefficientRecord> secondCoefficientRecords = FileService.GetCoefficientRecords(new FileInfo(coefficientFilePath), 1);
+            var totalFirstWorksheetSearchResultRecords = new List<SearchResultRecord>();
+            var totalSecondWorksheetSearchResultRecords = new List<SearchResultRecord>();
+
+            foreach (string filePath in baseFilePaths)
+            {
+                FileInfo baseFile = new FileInfo(filePath);
+                bool temporaryFileCreated = FileService.CreateTemporaryFileIfNeeded(baseFile, out FileInfo newBaseFile);
+
+                if (temporaryFileCreated)
+                {
+                    baseFile = newBaseFile;
+                }
+
+                List<MatchRecord> matchRecords = FileService.GetMatchRecords(baseFile);
+
+                var firstWorksheetSearchResultRecords = FileService.GetSearchResultRecords(matchRecords, firstCoefficientRecords, coefficientPosition, 1);
+                FileService.WriteSearchResults(firstWorksheetSearchResultRecords, new FileInfo(filePath), outputFile, 0, currentColumnNumber);
+
+                var secondWorksheetSearchResultRecords = FileService.GetSearchResultRecords(matchRecords, secondCoefficientRecords, coefficientPosition, 2);
+                FileService.WriteSearchResults(secondWorksheetSearchResultRecords, new FileInfo(filePath), outputFile, 1, currentColumnNumber);
+
+                if (currentColumnNumber == StartColumnNumber + 3)
+                {
+                    totalFirstWorksheetSearchResultRecords.AddRange(firstWorksheetSearchResultRecords);
+                    totalSecondWorksheetSearchResultRecords.AddRange(secondWorksheetSearchResultRecords);
+                }
+                else
+                {
+                    FileService.CalculateTotalResult(totalFirstWorksheetSearchResultRecords, firstWorksheetSearchResultRecords);
+                    FileService.CalculateTotalResult(totalSecondWorksheetSearchResultRecords, secondWorksheetSearchResultRecords);
+                }
+
+                if (temporaryFileCreated)
+                {
+                    FileService.DeleteFile(newBaseFile);
+                }
+
+                currentColumnNumber += 3;
+            }
+
+            FileService.WriteSearchResults(totalFirstWorksheetSearchResultRecords, outputFile, 0, startColumnNumber);
+            FileService.WriteSearchResults(totalSecondWorksheetSearchResultRecords, outputFile, 1, startColumnNumber);
         }
     }
 }
