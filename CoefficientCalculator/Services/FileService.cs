@@ -15,10 +15,12 @@ namespace CoefficientCalculator.Services
             if (file.Extension == ".xls")
             {
                 newFile = new FileInfo(ConvertXLS_XLSX(file));
+
                 return true;
             }
 
             newFile = null;
+
             return false;
         }
 
