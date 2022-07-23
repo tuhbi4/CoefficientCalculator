@@ -5,6 +5,21 @@ VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoefficientCalculator", "CoefficientCalculator\CoefficientCalculator.csproj", "{E16354D6-7085-4BB6-9A6E-BC0CC40AE39F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Task", "Task", "{9B7AFD54-193C-44D0-9A14-70D6CC12A89F}"
+	ProjectSection(SolutionItems) = preProject
+		Task\Коэффициент.xlsx = Task\Коэффициент.xlsx
+		Task\Результат П1.xlsx = Task\Результат П1.xlsx
+		Task\Результат П2.xlsx = Task\Результат П2.xlsx
+		Task\Результат Х.xlsx = Task\Результат Х.xlsx
+		Task\Тех.задание.txt = Task\Тех.задание.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "АНГ Д1", "АНГ Д1", "{A09A39B2-673D-430F-A8FC-714ED1ED63E9}"
+	ProjectSection(SolutionItems) = preProject
+		Task\АНГ Д1\АНГ Д1 16-17.xls = Task\АНГ Д1\АНГ Д1 16-17.xls
+		Task\АНГ Д1\АНГ Д1 17-18.xls = Task\АНГ Д1\АНГ Д1 17-18.xls
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,6 +33,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A09A39B2-673D-430F-A8FC-714ED1ED63E9} = {9B7AFD54-193C-44D0-9A14-70D6CC12A89F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CC916AF7-4129-4F84-8260-609F1B0AB1E8}
