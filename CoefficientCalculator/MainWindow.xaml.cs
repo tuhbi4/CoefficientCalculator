@@ -115,15 +115,15 @@ namespace CoefficientCalculator
             switch (coefficientPosition)
             {
                 case 1:
-                    outputfileName = "П1";
+                    outputfileName = "Результат П1";
                     break;
 
                 case 2:
-                    outputfileName = "Х";
+                    outputfileName = "Результат Х";
                     break;
 
                 case 3:
-                    outputfileName = "П2";
+                    outputfileName = "Результат П2";
                     break;
 
                 default:
